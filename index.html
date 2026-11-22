@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SETB Battle Rating Calculator</title>
+<style>
+  :root { color-scheme: dark; --bg:#101820; --panel:#1b2732; --panel2:#243442; --text:#eef3f6; --muted:#aebdc8; --accent:#e0ad55; --line:#3b4c59; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px 14px 40px; background:linear-gradient(145deg,#101820,#172631); color:var(--text); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  main { max-width:900px; margin:0 auto; }
+  header { margin-bottom:22px; }
+  .eyebrow { color:var(--accent); font-size:.78rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+  h1 { margin:5px 0 7px; font-size:clamp(1.8rem,5vw,2.6rem); line-height:1.1; }
+  .intro { margin:0; color:var(--muted); }
+  .layout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  section, .result { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  h2 { font-size:1rem; text-transform:uppercase; letter-spacing:.08em; margin:0 0 15px; color:var(--accent); }
+  .field { margin:0 0 14px; }
+  .field:last-child { margin-bottom:0; }
+  label { display:block; margin-bottom:6px; font-size:.9rem; font-weight:650; }
+  input, select { width:100%; min-height:43px; border:1px solid #526573; border-radius:8px; padding:9px 11px; background:#111c24; color:var(--text); font:inherit; }
+  input:focus, select:focus { outline:2px solid var(--accent); outline-offset:2px; }
+  .hint { display:block; color:var(--muted); font-size:.78rem; margin-top:5px; }
+  .result { margin-top:16px; background:linear-gradient(135deg,#273946,#1b2732); }
+  .result-top { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+  .br-label { color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-size:.78rem; font-weight:800; }
+  .br { color:var(--accent); font-size:clamp(2.8rem,8vw,4.4rem); font-weight:850; line-height:1.05; font-variant-numeric:tabular-nums; }
+  .speed-chip { border:1px solid #526573; border-radius:9px; padding:10px 13px; min-width:155px; }
+  .speed-chip strong { display:block; font-size:1.25rem; }
+  .speed-chip span { color:var(--muted); font-size:.8rem; }
+  .breakdown { margin-top:18px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .metric { background:#111c24a8; border:1px solid #354754; border-radius:8px; padding:10px; }
+  .metric span { display:block; color:var(--muted); font-size:.77rem; }
+  .metric strong { display:block; margin-top:3px; font-size:1.08rem; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .formula { margin:15px 0 0; color:var(--muted); font-size:.85rem; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:15px; }
+  button { border:0; border-radius:8px; padding:11px 16px; font:inherit; font-weight:750; cursor:pointer; }
+  .primary { background:var(--accent); color:#1c2328; }
+  .secondary { background:var(--panel2); color:var(--text); border:1px solid var(--line); }
+  button:hover { filter:brightness(1.08); }
+  .note { color:var(--muted); font-size:.82rem; margin-top:12px; }
+  @media (max-width:650px) { .layout { grid-template-columns:1fr; } .breakdown { grid-template-columns:repeat(2,minmax(0,1fr)); } body { padding-top:18px; } }
+  #brWarning {
+    color: #ff5c5c;
+    font-weight: 900;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">By GiftedLion</div>
+    <h1>Battle Rating Calculator</h1>
+    <p class="intro">Enter the vehicle's specifications. Speed and the final BR update automatically.</p>
+  </header>
+
+  <div class="layout">
+    <section>
+      <h2>Vehicle Information</h2>
+      <div class="field">
+        <label for="weight">Vehicle Weight</label>
+        <input id="weight" type="number" min="0" step="any" placeholder="e.g. 35" value="35">
+        <span class="hint">Enter Weight Rounded Down to Nearest Full Ton</span>
+      </div>
+      <div class="field">
+        <label for="engine">Engine Class</label>
+        <select id="engine">
+          <option value="10">Light (+10 km/h)</option>
+          <option value="20" selected>Medium (+20 km/h)</option>
+          <option value="30">Heavy (+30 km/h)</option>
+        </select>
+		<span class="hint">Only 1 Engine Applies the Bonus</span>
+      </div>
+      <div class="field">
+        <label for="era">Era</label>
+        <select id="era">
+          <option value="3">EWW2</option>
+          <option value="2.5" selected>LWW2</option>
+          <option value="1.5">ECW</option>
+          <option value="1.25">LCW</option>
+          <option value="1">Modern</option>
+        </select>
+		<span class="hint">Era effects the speed formula and allowed BR Range</span>
+      </div>
+      <div class="field">
+        <label for="mobility">Suspension Style</label>
+        <select id="mobility">
+          <option value="tracked" selected>Tracked</option>
+          <option value="wheeled">Wheeled</option>
+        </select>
+		<span class="hint">Tracked Vehicles capped at 80 km/h, Wheeled capped at 130 km/h.</span>
+		<span class="hint">A Tracked Vehicle is determined as any vehicle using Skid Steering or more than 8 Wheels.</span>
+      </div>
+	  <div class="field">
+	  <label for="speedOverride">Speed Override (km/h)</label>
+		<input
+			type="number"
+			id="speedOverride"
+			min="0"
+			step="1"
+			placeholder="Using Calculated Speed"
+		/>
+		<span class="hint">Leave Blank to use Calculated Speed. You may enter a Lower Speed to save points.
+		</span>
+		</div>
+		
+    </section>
+
+    <section>
+      <h2>Equipment and Loader</h2>
+      <div class="field">
+        <label for="loader">Loader style</label>
+        <select id="loader">
+          <option value="0">Manual (0 Points)</option>
+          <option value="6" class="connector-loader">Connector (6 Points)</option>
+          <option value="12">Magazine (12 Points)</option>
+          <option value="18" class="continuous-loader">Continuous (18 Points)</option>
+        </select>
+		  <span class="hint">EWW2 and LWW2 Magazine Loader Only on Secondary Weapons </span>
+		  <span class="hint">LCW only Autocannons Allowed Continuous Loading </span>
+      </div>
+      <div class="field">
+        <label for="weapons">Weapons</label>
+        <input id="weapons" type="number" min="0" step="any" value="0">
+		<span class="hint">When the EWW2 and LWW2 Era's are selected, points entered are automatically DOUBLED when applied to the BR.
+      </div>
+      <div class="field">
+        <label for="stabilizer">Stabilizer Style</label>
+        <select id="stabilizer">
+          <option value="0" class="no-stabilizer">None (0 Points)</option>
+          <option value="6" class="standard-stabilizer">Non-MART (6 Points)</option>
+          <option value="12" class="standard-stabilizer">MART (12 Points)</option>
+		  <option value="12" class="ecw-stabilizer">ECW Two-Axis Non-MART (12 points)</option>
+		  <option value="18" class="ecw-stabilizer">ECW Two-Axis MART/Non-MART (18 points)</option>
+		  <option value="24" class="ecw-stabilizer">ECW Two-Axis MART (24 points)</option>
+        </select>
+		<span class="hint">Greyed options are not available for your selected Era </span>
+      </div>
+      <div class="field">
+        <label for="support">Support Equipment</label>
+        <input id="support" type="number" min="0" step="any" value="0">
+      </div>
+	  <span class="hint">Use for non-offense items such as APS </span>
+    </section>
+  </div>
+
+  <section class="result" aria-live="polite">
+    <div class="result-top">
+      <div>
+        <div class="br-label">Calculated Battle Rating</div>
+        <div class="br" id="br">—</div>
+		<p>BR Range: <span id="brCategory">-</span></p>
+		<div id="brWarning"></div>
+      </div>
+      <div class="speed-chip">
+        <span>Calculated Speed</span>
+        <strong id="speed">— km/h</strong>
+        <span id="speedStatus">Enter valid values</span>
+      </div>
+    </div>
+    <p class="formula">BR = (Weight + Speed points + Loader + Weapons + Stabilizer + Support) ÷ 12</p>
+    <div class="actions">
+      <button class="primary" id="reset" type="button">Reset values</button>
+      <button class="secondary" id="copy" type="button">Copy results</button>
+    </div>
+    <p class="note" id="message">Tracked vehicles are capped at 80 km/h.</p>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const ids = ['weight','engine','era','mobility','speedOverride', 'loader','weapons','stabilizer','support'];
+  const speedBands = [
+    { min: 0, max: 20, points: 0, label: '0–20 km/h' },
+    { min: 21, max: 30, points: 6, label: '21–30 km/h' },
+    { min: 31, max: 40, points: 8, label: '31–40 km/h' },
+    { min: 41, max: 50, points: 12, label: '41–50 km/h' },
+    { min: 51, max: 60, points: 24, label: '51–60 km/h' },
+    { min: 61, max: 80, points: 36, label: '61–80 km/h' },
+    { min: 81, max: 100, points: 60, label: '81–100 km/h' },
+    { min: 101, max: 130, points: 84, label: '101–130 km/h' }
+  ];
+  const num = id => Number($(id).value);
+  const fmt = n => Number.isFinite(n) ? (Math.round((n + Number.EPSILON) * 100) / 100).toLocaleString(undefined, {maximumFractionDigits:2}) : '—';
+  function calculate() {
+  const weight = num('weight'), engine = num('engine'), era = num('era');
+  const weapons = num('weapons'), loader = num('loader'), stabilizer = num('stabilizer'), support = num('support');
+  const numericIds = ['weight', 'engine', 'era', 'loader', 'weapons', 'stabilizer', 'support'];
+
+  const valid =
+    numericIds.every(id => $(id).value !== '' && Number.isFinite(num(id))) &&
+    weight >= 0 &&
+    weapons >= 0 &&
+    support >= 0 &&
+    era > 0;
+
+	if (!valid) {
+    $('br').textContent = '—';
+    $('brWarning').textContent = '';
+    $('speed').textContent = '— km/h';
+    $('speedStatus').textContent = 'Check entered values';
+    $('message').textContent = 'Enter valid, non-negative values for the required fields.';
+    return;
+	}
+ 
+	let adjustedweapons = weapons;
+	
+	if (era === 3 || era === 2.5) {
+		adjustedweapons = weapons * 2;
+	}	
+    // Formula supplied by the user: (130 - (weight × 1.3) + engine bonus) / era modifier
+    const rawSpeed = (130 - (weight * 1.3) + engine) / era;
+    const cappedSpeed = Math.max(0, Math.min(130, $('mobility').value === 'tracked' ? Math.min(rawSpeed, 80) : rawSpeed));
+	const overrideValue = $('speedOverride').value;
+	
+	if (overrideValue !== '' &&
+		(!Number.isFinite(Number(overrideValue)) || Number(overrideValue) < 0)) {
+		$('speedStatus').textContent = 'Enter a Positive Number';
+		$('speed').textContent = '-km/h';
+		return;
+	}	
+	
+	const speedUsed = overrideValue === ''
+		? cappedSpeed
+		: Math.min(cappedSpeed, Number(overrideValue));
+		
+    const band = speedBands.find(b => speedUsed <= b.max);
+    const speedPts = band ? band.points : 84;
+    const total = weight + speedPts + loader + adjustedweapons + stabilizer + support;
+    const br = total / 12;
+	let brLimit;
+	if (era === 3) {
+		brLimit = 8;
+	} else if (era === 2.5) {
+		brLimit = 10;
+	} else if (era === 1.5) {
+		brLimit = 10;
+	} else if (era === 1.25) {
+		brLimit = 15;
+	} else if (era === 1) {
+		brLimit = 16;
+	}	
+    $('br').textContent = (Math.round(br * 10) / 10).toFixed(1);
+	const category = getBRCategory(br, era);
+	$('brCategory').textContent = category;
+	
+	if (br > brLimit) {
+		$('brWarning').textContent = 'OVER LIMIT';
+	} else {
+		$('brWarning').textContent = '';
+	}	
+    $('speed').textContent = `${fmt(speedUsed)} km/h`;
+
+	$('speedStatus').textContent =
+		overrideValue !== '' && Number(overrideValue) < cappedSpeed
+			? 'Speed override applied'
+			: rawSpeed < 0
+				? 'Floored at 0 km/h'
+				: $('mobility').value === 'tracked' && rawSpeed > 80
+					? 'Capped for tracked vehicle'
+					: rawSpeed > 130
+						? 'Capped at 130 km/h'
+						: 'Formula result';
+
+	$('message').textContent =
+		`Uncapped formula speed: ${fmt(rawSpeed)} km/h. Points are assigned using the final capped speed.`;
+  }
+  ids.forEach(id => {
+    if (id !== 'era') {
+        $(id).addEventListener('input', calculate);
+    }
+});
+
+	$('era').addEventListener('change', () => {
+    updateEraRestrictions();
+    calculate();
+});
+  $('reset').addEventListener('click', () => {
+    $('weight').value = '0'; 
+	$('engine').value = '10'; 
+	$('era').value = '3';
+    $('mobility').value = 'tracked';
+	$('speedOverride').value = '';
+	$('loader').value = '0';
+	$('weapons').value = '0';
+    $('stabilizer').value = '0';
+	$('support').value = '0';
+	updateEraRestrictions();
+	calculate();
+  });
+  $('copy').addEventListener('click', async () => {
+	const result = `Vehicle Battle Rating Calculator
+	Weight: ${$('weight').value}
+	Mobility: ${$('mobility').value}
+	Speed used: ${$('speed').textContent}
+	Speed override: ${$('speedOverride').value || 'None'}
+	Era: ${$('era').selectedOptions[0].text}
+	Loader: ${$('loader').selectedOptions[0].text}
+	Weapons points entered: ${$('weapons').value}
+	Stabilizer: ${$('stabilizer').selectedOptions[0].text}
+	Support equipment points: ${$('support').value}
+	Battle Rating: ${$('br').textContent}`;
+    try {
+      await navigator.clipboard.writeText(result);
+      $('message').textContent = 'Results copied to clipboard.';
+    } catch {
+      const area = document.createElement('textarea'); area.value = result; document.body.appendChild(area);
+      area.select(); document.execCommand('copy'); area.remove();
+      $('message').textContent = 'Results copied to clipboard.';
+    }
+  });
+  function updateEraRestrictions() {
+	const era = $('era').value;
+	const isEWW2 = era ==='3';
+	const isLWW2 = era === '2.5';
+	const isECW = era === '1.5';
+	
+	// Stabilizer Restrictions
+	
+	document.querySelectorAll('.ecw-stabilizer').forEach(option => {
+		option.disabled = !isECW;
+	});		
+	
+	document.querySelectorAll('.standard-stabilizer').forEach(option => {
+		option.disabled = isEWW2;
+	});
+
+	const selectedOption = $('stabilizer').selectedOptions[0];
+
+	if (selectedOption.disabled) {
+		$('stabilizer').value = '0';
+	}
+	
+	// Loader Restrictions
+	
+	document.querySelectorAll('.connector-loader').forEach(option => {
+		option.disabled = isEWW2 || isLWW2;
+	});	
+		
+	document.querySelectorAll('.continuous-loader').forEach(option => {
+		option.disabled = isEWW2 || isLWW2 || isECW;
+	});	
+	
+	const selectedLoader = $('loader').selectedOptions[0];
+	
+	if (selectedLoader.disabled) {
+		$('loader').value = '0';
+	}
+}	
+  updateEraRestrictions();	
+  
+  function getBRCategory(br, era) {
+	let underBRMax;
+	let lowBRMax;
+	
+	if (era === 3) {
+	// EWW2 BR Range
+		underBRMax = 3.0;
+		lowBRMax = 6.0;
+	}else if (era === 2.5) {
+	// LWW2 BR Range
+		underBRMax = 6.0;
+		lowBRMax = 8.0;
+	}else if (era === 1.5) {
+	// ECW BR Range
+		underBRMax = 5.0;
+		lowBRMax = 7.9;	
+	}else if (era === 1.25) {
+	// LCW BR Range
+		underBRMax = 10.0;
+		lowBRMax = 12.9;	
+	}else if (era === 1) {
+	// Modern BR Range
+		underBRMax = 10.0;
+		lowBRMax = 12.9;			
+	}
+	if (br < underBRMax) {
+		return "Under BR";
+	}else if (br < lowBRMax) {
+		return "low BR";
+	} else {
+		return "High BR";
+	}
+} 
+  calculate();
+})();
+</script>
+</body>
+</html>
