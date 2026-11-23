@@ -28,10 +28,15 @@ Index page by Aristeas, stole the rough theme from the br calculator
             --accent:#e0ad55;
             --line:#3b4c59;
         }
-        .canvas {
+        html:before{
+            content:"";
+            width: 100%;
+            height: 100%;
+            position: fixed;
             background: linear-gradient(145deg,#101820,#172631);
-            background-attachment: fixed;
-            
+            z-index: -1;
+        }
+        .canvas {
             display: flex;
             flex-direction: column;
             justify-content: center;
